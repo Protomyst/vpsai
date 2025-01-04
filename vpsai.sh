@@ -408,10 +408,32 @@ check_services_status() {
     docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 }
 
+# 检查是否首次运行
+check_first_run() {
+    if [ ! -f "/usr/local/bin/vpsai" ]; then
+        echo "检测到首次运行，开始安装..."
+        
+        # 创建系统目录和复制文件
+        mkdir -p /etc/vpsai
+        cp -r docker-compose /etc/vpsai/
+        cp -r nginx /etc/vpsai/
+        cp -r cron /etc/vpsai/
+
+        # 安装主程序
+        cp "$0" /usr/local/bin/vpsai
+        chmod +x /usr/local/bin/vpsai
+
+        echo -e "${GREEN}VPSAI 安装完成！${NC}"
+        echo "后续可直接使用 'vpsai' 命令启动程序"
+        echo "----------------------------------------"
+    fi
+}
+
 # 主程序入口
 main() {
     show_logo
     check_requirements
+    check_first_run
     install_base_packages
     while true; do
         show_menu
