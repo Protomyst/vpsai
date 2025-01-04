@@ -261,7 +261,7 @@ VPSAI 使用帮助：
    docker ps             查看运行状态
    docker-compose logs    查看服务日志
 
-详细文档请访问：https://github.com/Protomysy/vpsai
+详细文档请访问：https://github.com/Protomyst/vpsai
 EOF
 }
 

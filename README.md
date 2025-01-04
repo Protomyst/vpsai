@@ -36,7 +36,7 @@
 
 1. 下载脚本：
 ```bash
-git clone https://github.com/Protomysy/vpsai.git
+git clone https://github.com/Protomyst/vpsai.git
 cd vpsai
 ```
 
@@ -90,7 +90,7 @@ vpsai
 
 ## 📞 技术支持
 
-- GitHub Issues: https://github.com/Protomysy/vpsai/issues
+- GitHub Issues: https://github.com/Protomyst/vpsai/issues
 - Email: protomyst@outlook.com
 
 ## 📄 开源协议
