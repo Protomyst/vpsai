@@ -33,15 +33,15 @@ check_requirements() {
     if [ "$EUID" -ne 0 ]; then 
         echo -e "${RED}请使用root用户运行此脚本${NC}"
         exit 1
-    }
+    fi  # end root check
 
     # 检查系统架构
     ARCH=$(uname -m)
     IS_ARM=false
     if [[ $ARCH == *"arm"* || $ARCH == *"aarch"* ]]; then
         IS_ARM=true
-    fi
-}
+    fi  # end arch check
+}  # end check_requirements
 
 # 安装基础软件包
 install_base_packages() {
