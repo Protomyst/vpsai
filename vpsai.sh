@@ -47,13 +47,20 @@ check_requirements() {
 install_base_packages() {
     if command -v apt-get &>/dev/null; then
         apt-get update
-        apt-get install -y curl wget git docker.io docker-compose nginx
+        apt-get install -y curl wget git docker.io docker-compose nginx mysql-server
+        systemctl start mysql
+        systemctl enable mysql
     elif command -v yum &>/dev/null; then
-        yum install -y curl wget git docker docker-compose nginx
+        yum install -y curl wget git docker docker-compose nginx mysql mysql-server
+        systemctl start mysqld
+        systemctl enable mysqld
     fi
     
     systemctl start docker
     systemctl enable docker
+    
+    # 设置MySQL root密码
+    mysql_secure_installation
 }
 
 # 检查并配置端口
@@ -72,10 +79,14 @@ check_port() {
 configure_domain() {
     local service=$1
     local port=$2
+    local domain_configured=false
+    local configured_domain=""
     
     read -p "是否需要配置域名？(y/n): " need_domain
     if [ "$need_domain" = "y" ]; then
         read -p "请输入域名: " domain
+        configured_domain=$domain
+        domain_configured=true
         read -p "使用哪种证书？(1: Let's Encrypt 2: Cloudflare): " cert_type
         
         # 生成nginx配置
@@ -92,6 +103,9 @@ configure_domain() {
         
         systemctl reload nginx
     fi
+    
+    # 返回域名配置信息
+    echo "$domain_configured:$configured_domain"
 }
 
 # 配置自动更新
@@ -293,6 +307,23 @@ show_menu() {
     esac
 }
 
+# 获取服务器IP地址
+get_server_ip() {
+    # 尝试获取IPv4地址
+    IPV4=$(curl -s4 ifconfig.me 2>/dev/null || wget -qO- ipv4.icanhazip.com 2>/dev/null || dig +short myip.opendns.com @resolver1.opendns.com 2>/dev/null)
+    
+    # 尝试获取IPv6地址
+    IPV6=$(curl -s6 ifconfig.me 2>/dev/null || wget -qO- ipv6.icanhazip.com 2>/dev/null)
+    
+    # 构建访问地址
+    if [ -n "$IPV4" ]; then
+        echo "http://$IPV4:$1"
+    fi
+    if [ -n "$IPV6" ]; then
+        echo "http://[$IPV6]:$1"
+    fi
+}
+
 # 安装API服务
 install_api_services() {
     echo "1. OneAPI"
@@ -342,11 +373,20 @@ install_api_services() {
     # 启动服务
     docker-compose up -d
     
-    # 配置域名
-    configure_domain $service_name $port
+    # 配置域名并获取返回值
+    domain_info=$(configure_domain $service_name $port)
+    domain_configured=$(echo $domain_info | cut -d':' -f1)
+    configured_domain=$(echo $domain_info | cut -d':' -f2)
     
     echo -e "${GREEN}服务安装完成！${NC}"
-    echo "访问地址: http://localhost:$port"
+    echo -e "访问地址:"
+    get_server_ip $port | while read url; do
+        echo $url
+    done
+    
+    if [ "$domain_configured" = "true" ] && [ -n "$configured_domain" ]; then
+        echo "域名访问: https://$configured_domain"
+    fi
 }
 
 # 安装Chat服务
@@ -396,10 +436,21 @@ install_chat_services() {
     sed -i "s/$default_port:/$port:/" docker-compose.yml
     
     docker-compose up -d
-    configure_domain $service_name $port
+    
+    # 配置域名并获取返回值
+    domain_info=$(configure_domain $service_name $port)
+    domain_configured=$(echo $domain_info | cut -d':' -f1)
+    configured_domain=$(echo $domain_info | cut -d':' -f2)
     
     echo -e "${GREEN}服务安装完成！${NC}"
-    echo "访问地址: http://localhost:$port"
+    echo -e "访问地址:"
+    get_server_ip $port | while read url; do
+        echo $url
+    done
+    
+    if [ "$domain_configured" = "true" ] && [ -n "$configured_domain" ]; then
+        echo "域名访问: https://$configured_domain"
+    fi
 }
 
 # 检查服务状态
