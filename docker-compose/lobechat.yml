@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  lobe-chat:
+    image: lobehub/lobe-chat
+    container_name: lobe-chat
+    restart: always
+    ports:
+      - '9000:3210'
+    volumes:
+      - ~/ai/data/lobechat:/data
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ACCESS_CODE: ${ACCESS_CODE}
