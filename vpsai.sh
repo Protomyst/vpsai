@@ -43,24 +43,57 @@ check_requirements() {
     fi  # end arch check
 }  # end check_requirements
 
+# 检查软件包是否已安装
+check_package() {
+    if command -v apt-get &>/dev/null; then
+        dpkg -l "$1" &>/dev/null
+    elif command -v yum &>/dev/null; then
+        rpm -q "$1" &>/dev/null
+    fi
+}
+
 # 安装基础软件包
 install_base_packages() {
-    if command -v apt-get &>/dev/null; then
-        apt-get update
-        apt-get install -y curl wget git docker.io docker-compose nginx mysql-server
-        systemctl start mysql
-        systemctl enable mysql
-    elif command -v yum &>/dev/null; then
-        yum install -y curl wget git docker docker-compose nginx mysql mysql-server
-        systemctl start mysqld
-        systemctl enable mysqld
+    # 需要安装的包列表
+    local packages=(curl wget git docker.io docker-compose nginx mysql-server)
+    local need_install=false
+    
+    echo "检查依赖..."
+    for pkg in "${packages[@]}"; do
+        if ! check_package "$pkg"; then
+            echo "  - $pkg 未安装"
+            need_install=true
+        else
+            echo "  - $pkg 已安装"
+        fi
+    done
+    
+    if [ "$need_install" = true ]; then
+        echo "开始安装缺失的依赖..."
+        if command -v apt-get &>/dev/null; then
+            apt-get update
+            apt-get install -y "${packages[@]}"
+        elif command -v yum &>/dev/null; then
+            yum install -y "${packages[@]}"
+        fi
     fi
     
-    systemctl start docker
-    systemctl enable docker
+    # 检查服务状态
+    for service in docker mysql nginx; do
+        if ! systemctl is-active --quiet $service; then
+            echo "启动 $service 服务..."
+            systemctl start $service
+            systemctl enable $service
+        fi
+    done
     
-    # 设置MySQL root密码
-    mysql_secure_installation
+    # 检查MySQL root密码是否已设置
+    if mysql -u root -e "SELECT 1" &>/dev/null; then
+        echo "MySQL root密码未设置，运行安全配置..."
+        mysql_secure_installation
+    else
+        echo "MySQL root密码已配置"
+    fi
 }
 
 # 检查并配置端口
