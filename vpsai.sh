@@ -607,6 +607,10 @@ configure_custom_cert() {
 
 # 配置Let's Encrypt证书
 configure_letsencrypt() {
+    # 清理可能存在的旧临时配置
+    rm -f /etc/nginx/sites-enabled/*.temp
+    rm -f /etc/nginx/sites-available/*.temp
+    
     read -p "请输入域名: " domain
     read -p "请输入邮箱(用于证书通知): " email
     
@@ -621,9 +625,11 @@ server {
     listen 80;
     server_name $domain;
     
+    root /var/www/letsencrypt;
+    
     location ^~ /.well-known/acme-challenge/ {
         default_type "text/plain";
-        root /var/www/letsencrypt;
+        alias /var/www/letsencrypt/.well-known/acme-challenge/;
     }
     
     location / {
@@ -632,32 +638,57 @@ server {
 }
 EOF
     
+    # 检查配置文件语法
+    if ! nginx -t; then
+        echo "Nginx配置错误"
+        rm -f "$nginx_temp"
+        return 1
+    fi
+    
+    # 启用新配置
     ln -sf "$nginx_temp" /etc/nginx/sites-enabled/
-    nginx -t && systemctl reload nginx
+    systemctl reload nginx
+    
+    # 等待Nginx重新加载
+    sleep 2
     
     # 安装certbot
     if ! command -v certbot &> /dev/null; then
         echo "正在安装certbot..."
         snap install --classic certbot
+        # 等待安装完成
+        sleep 2
     fi
     
     # 申请证书
-    sudo certbot certonly \
+    certbot certonly \
         --webroot \
         --agree-tos \
         --email "$email" \
         --webroot-path /var/www/letsencrypt \
-        --domains "$domain"
+        --domains "$domain" \
+        --non-interactive
     
-    if [ $? -ne 0 ]; then
+    local cert_result=$?
+    
+    # 清理临时配置
+    rm -f "$nginx_temp"
+    rm -f "/etc/nginx/sites-enabled/${domain}.temp"
+    systemctl reload nginx
+    
+    if [ $cert_result -ne 0 ]; then
         echo "证书申请失败"
-        rm -f "$nginx_temp"
         return 1
     fi
     
     # 获取证书路径
     local cert_path="/etc/letsencrypt/live/$domain/fullchain.pem"
     local key_path="/etc/letsencrypt/live/$domain/privkey.pem"
+    
+    if [ ! -f "$cert_path" ] || [ ! -f "$key_path" ]; then
+        echo "证书文件不存在"
+        return 1
+    fi
     
     # 配置服务
     echo "请选择要配置的服务:"
@@ -688,12 +719,9 @@ EOF
     
     create_nginx_config "$domain" "$cert_path" "$key_path" "$port"
     
-    # 清理临时配置
-    rm -f "$nginx_temp"
-    
     # 配置自动续期
     echo "配置证书自动续期..."
-    (crontab -l 2>/dev/null; echo "0 0 1 * * certbot renew --quiet") | crontab -
+    (crontab -l 2>/dev/null | grep -v "certbot renew"; echo "0 0 1 * * certbot renew --quiet") | crontab -
     
     echo "证书配置完成!"
     echo "域名访问地址: https://$domain"
