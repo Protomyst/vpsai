@@ -118,10 +118,8 @@ configure_domain() {
         sed "s/\${DOMAIN}/$domain/g; s/\${PORT}/$port/g" \
             /etc/vpsai/nginx/template.conf > /etc/nginx/conf.d/$domain.conf
         
-        # 重载Nginx
-        if ! systemctl reload nginx; then
-            systemctl restart nginx
-        fi
+        # 重启Nginx服务
+        systemctl restart nginx
         
         read -p "使用哪种证书？(1: Let's Encrypt 2: Cloudflare): " cert_type
         if [ "$cert_type" = "1" ]; then
@@ -143,28 +141,16 @@ configure_domain() {
             read -p "确认完成后按回车继续"
             
             # 添加HTTPS配置
-            cat >> /etc/nginx/conf.d/$domain.conf << EOF
-
-server {
-    listen 443 ssl;
-    server_name ${domain};
-
-    ssl_certificate /etc/nginx/ssl/${domain}/fullchain.pem;
-    ssl_certificate_key /etc/nginx/ssl/${domain}/privkey.pem;
-    
-    location / {
-        proxy_pass http://localhost:${port};
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-}
-EOF
+            sed "s/\${DOMAIN}/$domain/g; s/\${PORT}/$port/g; s|\${CERT_PATH}|/etc/nginx/ssl/$domain|g" \
+                /etc/vpsai/nginx/ssl_template.conf > /etc/nginx/conf.d/$domain.ssl.conf
         fi
         
-        # 重载配置
-        systemctl reload nginx
+        # 检查并重载Nginx配置
+        if nginx -t; then
+            systemctl reload nginx || systemctl restart nginx
+        else
+            echo -e "${RED}Nginx配置检查失败，请检查配置文件${NC}"
+        fi
     fi
     
     # 返回域名配置信息
