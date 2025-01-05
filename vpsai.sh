@@ -112,20 +112,58 @@ configure_domain() {
         read -p "请输入域名: " domain
         configured_domain=$domain
         domain_configured=true
-        read -p "使用哪种证书？(1: Let's Encrypt 2: Cloudflare): " cert_type
         
-        # 生成nginx配置
+        # 先配置HTTP
+        echo "配置HTTP域名..."
         sed "s/\${DOMAIN}/$domain/g; s/\${PORT}/$port/g" \
             /etc/vpsai/nginx/template.conf > /etc/nginx/conf.d/$domain.conf
-            
-        if [ "$cert_type" = "1" ]; then
-            apt-get install -y certbot python3-certbot-nginx
-            certbot --nginx -d $domain
-        else
-            echo "请将Cloudflare证书放置在 /etc/nginx/ssl/$domain/ 目录下"
-            read -p "确认完成后按回车继续"
+        
+        # 重载Nginx
+        if ! systemctl reload nginx; then
+            systemctl restart nginx
         fi
         
+        read -p "使用哪种证书？(1: Let's Encrypt 2: Cloudflare): " cert_type
+        if [ "$cert_type" = "1" ]; then
+            echo "申请Let's Encrypt证书..."
+            apt-get install -y certbot python3-certbot-nginx
+            
+            # 使用certbot配置HTTPS
+            if certbot --nginx -d $domain; then
+                echo "SSL证书配置成功！"
+            else
+                echo -e "${RED}SSL证书配置失败，保持HTTP配置${NC}"
+            fi
+        else
+            # 创建SSL证书目录
+            mkdir -p /etc/nginx/ssl/$domain
+            echo "请将Cloudflare证书放置在 /etc/nginx/ssl/$domain/ 目录下"
+            echo "fullchain.pem - 证书文件"
+            echo "privkey.pem   - 私钥文件"
+            read -p "确认完成后按回车继续"
+            
+            # 添加HTTPS配置
+            cat >> /etc/nginx/conf.d/$domain.conf << EOF
+
+server {
+    listen 443 ssl;
+    server_name ${domain};
+
+    ssl_certificate /etc/nginx/ssl/${domain}/fullchain.pem;
+    ssl_certificate_key /etc/nginx/ssl/${domain}/privkey.pem;
+    
+    location / {
+        proxy_pass http://localhost:${port};
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
+        fi
+        
+        # 重载配置
         systemctl reload nginx
     fi
     
@@ -397,7 +435,7 @@ get_server_ip() {
     IPV4=$(curl -s4 ifconfig.me 2>/dev/null || wget -qO- ipv4.icanhazip.com 2>/dev/null || dig +short myip.opendns.com @resolver1.opendns.com 2>/dev/null)
     
     # 尝试获取IPv6地址
-    IPV6=$(curl -s6 ifconfig.me 2>/dev/null || wget -qO- ipv6.icanhazip.com 2>/dev/null)
+    IPV6=$(curl -s6 ifconfig.me 2>/dev/null || wget -qO- ipv6.icanhazipip.com 2>/dev/null)
     
     # 构建访问地址
     if [ -n "$IPV4" ]; then
