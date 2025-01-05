@@ -393,13 +393,19 @@ install_api_services() {
     
     mkdir -p ~/ai/data/$service_name
     cd ~/ai/data/$service_name
-    cp /etc/vpsai/docker-compose/${service_name}.yml ./
+    cp /etc/vpsai/docker-compose/${service_name}.yml docker-compose.yml
+    
+    # 检查文件是否存在
+    if [ ! -f "docker-compose.yml" ]; then
+        echo -e "${RED}错误：配置文件复制失败${NC}"
+        return 1
+    fi
     
     port=$(check_port $default_port)
-    sed -i "s/$default_port:/$port:/" *.yml
+    sed -i "s/$default_port:/$port:/" docker-compose.yml
     
-    # 启动服务，使用找到的yml文件
-    docker-compose -f *.yml up -d
+    # 启动服务
+    docker-compose up -d
     
     # 配置域名并获取返回值
     domain_info=$(configure_domain $service_name $port)
@@ -458,13 +464,19 @@ install_chat_services() {
     
     mkdir -p ~/ai/data/$service_name
     cd ~/ai/data/$service_name
-    cp /etc/vpsai/docker-compose/${service_name}.yml ./
+    cp /etc/vpsai/docker-compose/${service_name}.yml docker-compose.yml
+    
+    # 检查文件是否存在
+    if [ ! -f "docker-compose.yml" ]; then
+        echo -e "${RED}错误：配置文件复制失败${NC}"
+        return 1
+    fi
     
     port=$(check_port $default_port)
-    sed -i "s/$default_port:/$port:/" *.yml
+    sed -i "s/$default_port:/$port:/" docker-compose.yml
     
-    # 启动服务，使用找到的yml文件
-    docker-compose -f *.yml up -d
+    # 启动服务
+    docker-compose up -d
     
     # 配置域名并获取返回值
     domain_info=$(configure_domain $service_name $port)
