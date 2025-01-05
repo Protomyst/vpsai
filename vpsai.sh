@@ -144,15 +144,15 @@ show_menu() {
     read -p "请输入选项 [1-8]: " choice
     
     case $choice in
-        1) install_api_service ;;
-        2) install_chat_service ;;
+        1) install_api_service && read -p "按回车键继续..." ;;
+        2) install_chat_service && read -p "按回车键继续..." ;;
         3) check_service_status ;;
-        4) configure_updates ;;
-        5) configure_domain ;;
-        6) remove_service ;;
+        4) configure_updates && read -p "按回车键继续..." ;;
+        5) configure_domain && read -p "按回车键继续..." ;;
+        6) remove_service && read -p "按回车键继续..." ;;
         7) show_help ;;
         8) exit 0 ;;
-        *) echo "无效选项" ;;
+        *) echo "无效选项" && read -p "按回车键继续..." ;;
     esac
 }
 
@@ -253,6 +253,8 @@ show_access_info() {
         echo "$extra_info"
     fi
     echo "----------------------------------------"
+    echo -e "\n按回车键返回主菜单..."
+    read
 }
 
 # OneAPI安装
@@ -480,6 +482,8 @@ remove_service() {
         docker rm $service_name
         docker rmi $(docker images | grep $service_name | awk '{print $3}')
         echo "服务已删除"
+        echo -e "\n按回车键返回主菜单..."
+        read
     fi
 }
 
@@ -772,9 +776,13 @@ EOF
         ln -sf "$nginx_config" /etc/nginx/sites-enabled/
         systemctl reload nginx
         echo "Nginx配置已更新: https://$domain"
+        echo -e "\n按回车键返回主菜单..."
+        read
     else
         echo "Nginx配置错误，请检查配置文件"
         rm -f "$nginx_config"
+        echo -e "\n按回车键返回主菜单..."
+        read
         return 1
     fi
 }
@@ -902,6 +910,7 @@ main() {
     
     while true; do
         show_menu
+        # 这里不需要额外的暂停，因为在show_menu中已经处理了
     done
 }
 
