@@ -604,27 +604,95 @@ configure_custom_cert() {
 # 配置Let's Encrypt证书
 configure_letsencrypt() {
     read -p "请输入域名: " domain
+    read -p "请输入邮箱(用于证书通知): " email
+    
+    # 创建验证目录
+    local acme_dir="/var/www/letsencrypt/.well-known/acme-challenge"
+    mkdir -p "$acme_dir"
+    
+    # 创建初始Nginx配置用于验证
+    local nginx_temp="/etc/nginx/sites-available/${domain}.temp"
+    cat > "$nginx_temp" <<EOF
+server {
+    listen 80;
+    server_name $domain;
+    
+    location ^~ /.well-known/acme-challenge/ {
+        default_type "text/plain";
+        root /var/www/letsencrypt;
+    }
+    
+    location / {
+        return 301 https://\$host\$request_uri;
+    }
+}
+EOF
+    
+    ln -sf "$nginx_temp" /etc/nginx/sites-enabled/
+    nginx -t && systemctl reload nginx
     
     # 安装certbot
     if ! command -v certbot &> /dev/null; then
         echo "正在安装certbot..."
-        sudo apt-get update
-        sudo apt-get install -y certbot
+        snap install --classic certbot
     fi
     
     # 申请证书
-    sudo certbot certonly --standalone -d "$domain"
+    sudo certbot certonly \
+        --webroot \
+        --agree-tos \
+        --email "$email" \
+        --webroot-path /var/www/letsencrypt \
+        --domains "$domain"
     
-    # 获取证书路径
-    cert_path="/etc/letsencrypt/live/$domain/fullchain.pem"
-    key_path="/etc/letsencrypt/live/$domain/privkey.pem"
-    
-    if [ ! -f "$cert_path" ] || [ ! -f "$key_path" ]; then
+    if [ $? -ne 0 ]; then
         echo "证书申请失败"
-        return
+        rm -f "$nginx_temp"
+        return 1
     fi
     
-    create_nginx_config "$domain" "$cert_path" "$key_path"
+    # 获取证书路径
+    local cert_path="/etc/letsencrypt/live/$domain/fullchain.pem"
+    local key_path="/etc/letsencrypt/live/$domain/privkey.pem"
+    
+    # 配置服务
+    echo "请选择要配置的服务:"
+    echo "1. OneAPI (端口: 3000)"
+    echo "2. NewAPI (端口: 4000)"
+    echo "3. VoAPI (端口: 5000)"
+    echo "4. Open-WebUI (端口: 6000)"
+    echo "5. NextChat (端口: 7000)"
+    echo "6. LibreChat (端口: 8000)"
+    echo "7. LobeChat (端口: 9000)"
+    
+    read -p "请选择 [1-7]: " service_choice
+    
+    local port
+    case $service_choice in
+        1) port=3000 ;;
+        2) port=4000 ;;
+        3) port=5000 ;;
+        4) port=6000 ;;
+        5) port=7000 ;;
+        6) port=8000 ;;
+        7) port=9000 ;;
+        *) 
+            echo "无效选项"
+            return 1
+            ;;
+    esac
+    
+    create_nginx_config "$domain" "$cert_path" "$key_path" "$port"
+    
+    # 清理临时配置
+    rm -f "$nginx_temp"
+    
+    # 配置自动续期
+    echo "配置证书自动续期..."
+    (crontab -l 2>/dev/null; echo "0 0 1 * * certbot renew --quiet") | crontab -
+    
+    echo "证书配置完成!"
+    echo "域名访问地址: https://$domain"
 }
 
 # 创建Nginx配置
@@ -636,28 +704,52 @@ create_nginx_config() {
     
     nginx_config="/etc/nginx/sites-available/$domain"
     
-    sudo tee "$nginx_config" > /dev/null <<EOF
+    # 创建最终的Nginx配置
+    cat > "$nginx_config" <<EOF
+# HTTP重定向到HTTPS
 server {
     listen 80;
     server_name $domain;
-    return 301 https://\$host\$request_uri;
+    
+    location ^~ /.well-known/acme-challenge/ {
+        default_type "text/plain";
+        root /var/www/letsencrypt;
+    }
+    
+    location / {
+        return 301 https://\$host\$request_uri;
+    }
 }
 
+# HTTPS服务配置
 server {
-    listen 443 ssl;
+    listen 443 ssl http2;
     server_name $domain;
     
     ssl_certificate $cert_path;
     ssl_certificate_key $key_path;
+    ssl_trusted_certificate $cert_path;
     
-    # SSL配置
+    # SSL配置优化
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:50m;
+    ssl_session_tickets off;
+    
     ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
-    ssl_prefer_server_ciphers off;
+    ssl_ciphers EECDH+AESGCM:EECDH+AES;
+    ssl_ecdh_curve secp384r1;
+    ssl_prefer_server_ciphers on;
     
-    # HSTS配置
-    add_header Strict-Transport-Security "max-age=31536000" always;
+    ssl_stapling on;
+    ssl_stapling_verify on;
     
+    # 安全头部
+    add_header Strict-Transport-Security "max-age=15768000; includeSubdomains; preload" always;
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+    add_header X-XSS-Protection "1; mode=block";
+    
+    # 反向代理配置
     location / {
         proxy_pass http://localhost:$port;
         proxy_http_version 1.1;
@@ -667,19 +759,23 @@ server {
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
+        proxy_cache_bypass \$http_upgrade;
+        
+        # WebSocket支持
+        proxy_read_timeout 86400;
     }
 }
 EOF
     
-    # 检查配置文件语法
+    # 检查配置并应用
     if nginx -t; then
-        # 创建软链接并重载Nginx
         ln -sf "$nginx_config" /etc/nginx/sites-enabled/
         systemctl reload nginx
-        echo "域名配置完成: https://$domain"
+        echo "Nginx配置已更新: https://$domain"
     else
         echo "Nginx配置错误，请检查配置文件"
         rm -f "$nginx_config"
+        return 1
     fi
 }
 
