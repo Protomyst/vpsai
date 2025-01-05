@@ -219,6 +219,42 @@ install_chat_service() {
     esac
 }
 
+# 获取服务器IP
+get_server_ip() {
+    # 优先获取公网IPv4地址
+    public_ip=$(curl -s -4 ip.sb || curl -s -4 ifconfig.me || curl -s -4 icanhazip.com)
+    if [ -n "$public_ip" ]; then
+        echo "$public_ip"
+        return
+    fi
+    
+    # 如果获取公网IP失败，使用本地IP
+    local_ip=$(ip -4 addr show | grep -oP '(?<=inet\s)\d+(\.\d+){3}' | grep -v "127.0.0.1" | head -n 1)
+    if [ -n "$local_ip" ]; then
+        echo "$local_ip"
+        return
+    fi
+    
+    echo "无法获取服务器IP"
+}
+
+# 显示访问地址
+show_access_info() {
+    local service_name="$1"
+    local port="$2"
+    local extra_info="$3"
+    
+    echo "----------------------------------------"
+    echo "🎉 $service_name 安装完成!"
+    echo
+    local ip=$(get_server_ip)
+    echo "访问地址: http://$ip:$port"
+    if [ -n "$extra_info" ]; then
+        echo "$extra_info"
+    fi
+    echo "----------------------------------------"
+}
+
 # OneAPI安装
 install_one_api() {
     local default_port=3000
@@ -240,6 +276,7 @@ install_one_api() {
         justsong/one-api
         
     open_firewall_port $port
+    show_access_info "OneAPI" "$port" "初始用户名: root\n初始密码: 123456"
 }
 
 # NewAPI安装
@@ -263,6 +300,7 @@ install_new_api() {
         calciumion/new-api:latest
         
     open_firewall_port $port
+    show_access_info "NewAPI" "$port"
 }
 
 # VoAPI安装
@@ -306,6 +344,7 @@ EOF
     
     cd "$data_dir" && docker-compose up -d
     open_firewall_port $port
+    show_access_info "VoAPI" "$port"
 }
 
 # Open WebUI安装
@@ -330,6 +369,7 @@ install_open_webui() {
         ghcr.io/open-webui/open-webui:main
         
     open_firewall_port $port
+    show_access_info "Open-WebUI" "$port"
 }
 
 # NextChat安装
@@ -355,6 +395,7 @@ install_nextchat() {
         yidadaa/chatgpt-next-web
         
     open_firewall_port $port
+    show_access_info "NextChat" "$port" "访问密码: $access_code"
 }
 
 # LibreChat安装
@@ -374,6 +415,7 @@ install_librechat() {
     
     docker-compose up -d
     open_firewall_port $port
+    show_access_info "LibreChat" "$port"
 }
 
 # LobeChat安装
@@ -399,6 +441,7 @@ install_lobechat() {
         lobehub/lobe-chat
         
     open_firewall_port $port
+    show_access_info "LobeChat" "$port" "访问密码: $access_code"
 }
 
 # 删除服务
