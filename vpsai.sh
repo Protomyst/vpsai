@@ -571,7 +571,34 @@ configure_custom_cert() {
         return
     fi
     
-    create_nginx_config "$domain" "$cert_path" "$key_path"
+    # 选择要配置的服务
+    echo "请选择要配置的服务:"
+    echo "1. OneAPI (端口: 3000)"
+    echo "2. NewAPI (端口: 4000)"
+    echo "3. VoAPI (端口: 5000)"
+    echo "4. Open-WebUI (端口: 6000)"
+    echo "5. NextChat (端口: 7000)"
+    echo "6. LibreChat (端口: 8000)"
+    echo "7. LobeChat (端口: 9000)"
+    
+    read -p "请选择 [1-7]: " service_choice
+    
+    local port
+    case $service_choice in
+        1) port=3000 ;;
+        2) port=4000 ;;
+        3) port=5000 ;;
+        4) port=6000 ;;
+        5) port=7000 ;;
+        6) port=8000 ;;
+        7) port=9000 ;;
+        *) 
+            echo "无效选项"
+            return
+            ;;
+    esac
+    
+    create_nginx_config "$domain" "$cert_path" "$key_path" "$port"
 }
 
 # 配置Let's Encrypt证书
@@ -598,6 +625,62 @@ configure_letsencrypt() {
     fi
     
     create_nginx_config "$domain" "$cert_path" "$key_path"
+}
+
+# 创建Nginx配置
+create_nginx_config() {
+    domain=$1
+    cert_path=$2
+    key_path=$3
+    port=$4
+    
+    nginx_config="/etc/nginx/sites-available/$domain"
+    
+    sudo tee "$nginx_config" > /dev/null <<EOF
+server {
+    listen 80;
+    server_name $domain;
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name $domain;
+    
+    ssl_certificate $cert_path;
+    ssl_certificate_key $key_path;
+    
+    # SSL配置
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    
+    # HSTS配置
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    
+    location / {
+        proxy_pass http://localhost:$port;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+EOF
+    
+    # 检查配置文件语法
+    if nginx -t; then
+        # 创建软链接并重载Nginx
+        ln -sf "$nginx_config" /etc/nginx/sites-enabled/
+        systemctl reload nginx
+        echo "域名配置完成: https://$domain"
+    else
+        echo "Nginx配置错误，请检查配置文件"
+        rm -f "$nginx_config"
+    fi
 }
 
 ##################
@@ -673,7 +756,7 @@ setup_auto_update() {
     # 创建更新脚本
     cat > /etc/cron.daily/vpsai-update <<EOF
 #!/bin/bash
-PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 
 # 更新脚本
 cd /root/vpsai && git pull
