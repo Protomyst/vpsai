@@ -112,48 +112,50 @@ configure_domain() {
         read -p "请输入域名: " domain
         configured_domain=$domain
         domain_configured=true
-        
-        # 先配置HTTP
-        echo "配置HTTP域名..."
+
+        echo "配置HTTP服务..."
         sed "s/\${DOMAIN}/$domain/g; s/\${PORT}/$port/g" \
             /etc/vpsai/nginx/template.conf > /etc/nginx/conf.d/$domain.conf
-        
-        # 重启Nginx服务
-        systemctl restart nginx
-        
+
+        # 测试并应用HTTP配置
+        if nginx -t; then
+            systemctl reload nginx
+        else
+            echo -e "${RED}Nginx HTTP配置检查失败，请检查 /etc/nginx/conf.d/$domain.conf${NC}"
+            return
+        fi
+
         read -p "使用哪种证书？(1: Let's Encrypt 2: Cloudflare): " cert_type
         if [ "$cert_type" = "1" ]; then
-            echo "申请Let's Encrypt证书..."
             apt-get install -y certbot python3-certbot-nginx
-            
-            # 使用certbot配置HTTPS
-            if certbot --nginx -d $domain; then
+            echo "申请Let's Encrypt证书..."
+
+            # Certbot 会自动配置HTTPS
+            if certbot --nginx -d "$domain"; then
                 echo "SSL证书配置成功！"
             else
-                echo -e "${RED}SSL证书配置失败，保持HTTP配置${NC}"
+                echo -e "${RED}SSL证书配置失败，已保持HTTP配置${NC}"
             fi
         else
-            # 创建SSL证书目录
+            # 手动Cloudflare证书
             mkdir -p /etc/nginx/ssl/$domain
-            echo "请将Cloudflare证书放置在 /etc/nginx/ssl/$domain/ 目录下"
-            echo "fullchain.pem - 证书文件"
-            echo "privkey.pem   - 私钥文件"
+            echo "请将证书 fullchain.pem 和 privkey.pem 放置在 /etc/nginx/ssl/$domain/"
             read -p "确认完成后按回车继续"
-            
+
             # 添加HTTPS配置
-            sed "s/\${DOMAIN}/$domain/g; s/\${PORT}/$port/g; s|\${CERT_PATH}|/etc/nginx/ssl/$domain|g" \
+            sed "s/\${DOMAIN}/$domain/g; s/\${PORT}/$port/g; \
+                 s|\${CERT_PATH}|/etc/nginx/ssl/$domain|g" \
                 /etc/vpsai/nginx/ssl_template.conf > /etc/nginx/conf.d/$domain.ssl.conf
-        fi
-        
-        # 检查并重载Nginx配置
-        if nginx -t; then
-            systemctl reload nginx || systemctl restart nginx
-        else
-            echo -e "${RED}Nginx配置检查失败，请检查配置文件${NC}"
+
+            if nginx -t; then
+                systemctl reload nginx
+            else
+                echo -e "${RED}Nginx HTTPS配置检查失败，已保持HTTP配置${NC}"
+                rm -f /etc/nginx/conf.d/$domain.ssl.conf
+            fi
         fi
     fi
-    
-    # 返回域名配置信息
+
     echo "$domain_configured:$configured_domain"
 }
 
@@ -540,7 +542,7 @@ install_chat_services() {
             service_name="librechat"
             default_port=8000
             ;;
-        4) 
+         4) 
             service_name="lobechat"
             default_port=9000
             ;;
