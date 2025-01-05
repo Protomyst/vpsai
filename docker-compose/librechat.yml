@@ -7,7 +7,6 @@ services:
       - 8000:3080
     depends_on:
       - mongodb
-      - mysql
     restart: always
     volumes:
       - ~/ai/data/librechat/images:/app/client/public/images
@@ -16,8 +15,6 @@ services:
       - HOST=0.0.0.0
       - NODE_ENV=production
       - MONGO_URI=mongodb://mongodb:27017/LibreChat
-      - DB_TYPE=mysql
-      - DB_CONNECTION=mysql://librechat:librechat123@vpsai-mysql:3306/librechat
     networks:
       - vpsai-net
 
@@ -29,18 +26,6 @@ services:
       - ~/ai/data/librechat/mongodb:/data/db
     networks:
       - vpsai-net
-
-  mysql:
-    image: mysql:8.2
-    container_name: librechat-mysql
-    restart: always
-    volumes:
-      - ~/ai/data/librechat/mysql:/var/lib/mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: librechat
-      MYSQL_DATABASE: librechat
-      MYSQL_USER: librechat
-      MYSQL_PASSWORD: librechat
 
 networks:
   vpsai-net:

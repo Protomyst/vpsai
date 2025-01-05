@@ -12,7 +12,6 @@ services:
       - ~/ai/data/oneapi:/data
       - ./logs:/app/logs
     environment:
-      - SQL_DSN=oneapi:oneapi123@tcp(vpsai-mysql:3306)/oneapi
       - REDIS_CONN_STRING=redis://redis
       - SESSION_SECRET=random_string
       - TZ=Asia/Shanghai
@@ -27,19 +26,6 @@ services:
     restart: always
     networks:
       - vpsai-net
-
-  db:
-    image: "${REGISTRY:-docker.io}/mysql:8.2.0"
-    restart: always
-    container_name: mysql
-    volumes:
-      - ~/ai/data/mysql:/var/lib/mysql
-    environment:
-      TZ: Asia/Shanghai
-      MYSQL_ROOT_PASSWORD: 'OneAPI@justsong'
-      MYSQL_USER: oneapi
-      MYSQL_PASSWORD: '123456'
-      MYSQL_DATABASE: one-api
 
 networks:
   vpsai-net:

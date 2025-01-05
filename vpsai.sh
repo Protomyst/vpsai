@@ -55,7 +55,7 @@ check_package() {
 # 安装基础软件包
 install_base_packages() {
     # 需要安装的包列表
-    local packages=(curl wget git docker.io docker-compose nginx mysql-server)
+    local packages=(curl wget git docker.io docker-compose nginx)  # 移除 mysql-server
     local need_install=false
     
     echo "检查依赖..."
@@ -79,21 +79,13 @@ install_base_packages() {
     fi
     
     # 检查服务状态
-    for service in docker mysql nginx; do
+    for service in docker nginx; do  # 移除 mysql
         if ! systemctl is-active --quiet $service; then
             echo "启动 $service 服务..."
             systemctl start $service
             systemctl enable $service
         fi
     done
-    
-    # 检查MySQL root密码是否已设置
-    if mysql -u root -e "SELECT 1" &>/dev/null; then
-        echo "MySQL root密码未设置，运行安全配置..."
-        mysql_secure_installation
-    else
-        echo "MySQL root密码已配置"
-    fi
 }
 
 # 检查并配置端口
@@ -557,47 +549,6 @@ check_services_status() {
     docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 }
 
-# 初始化MySQL服务
-init_mysql_service() {
-    echo "正在初始化MySQL服务..."
-    
-    # 创建共享网络
-    if ! docker network ls | grep -q vpsai-net; then
-        docker network create vpsai-net
-    fi
-    
-    # 启动MySQL服务
-    if ! docker ps | grep -q vpsai-mysql; then
-        cd ~/ai/data
-        docker-compose -f /etc/vpsai/docker-compose/mysql.yml up -d
-        echo "等待MySQL启动..."
-        sleep 10
-        
-        # 创建数据库和用户
-        docker exec vpsai-mysql mysql -uroot -pvpsai_root_pwd -e "
-            CREATE DATABASE IF NOT EXISTS oneapi;
-            CREATE DATABASE IF NOT EXISTS newapi;
-            CREATE DATABASE IF NOT EXISTS nextchat;
-            CREATE DATABASE IF NOT EXISTS librechat;
-            CREATE DATABASE IF NOT EXISTS lobechat;
-            
-            CREATE USER IF NOT EXISTS 'oneapi'@'%' IDENTIFIED BY 'oneapi123';
-            CREATE USER IF NOT EXISTS 'newapi'@'%' IDENTIFIED BY 'newapi123';
-            CREATE USER IF NOT EXISTS 'nextchat'@'%' IDENTIFIED BY 'nextchat123';
-            CREATE USER IF NOT EXISTS 'librechat'@'%' IDENTIFIED BY 'librechat123';
-            CREATE USER IF NOT EXISTS 'lobechat'@'%' IDENTIFIED BY 'lobechat123';
-            
-            GRANT ALL PRIVILEGES ON oneapi.* TO 'oneapi'@'%';
-            GRANT ALL PRIVILEGES ON newapi.* TO 'newapi'@'%';
-            GRANT ALL PRIVILEGES ON nextchat.* TO 'nextchat'@'%';
-            GRANT ALL PRIVILEGES ON librechat.* TO 'librechat'@'%';
-            GRANT ALL PRIVILEGES ON lobechat.* TO 'lobechat'@'%';
-            
-            FLUSH PRIVILEGES;
-        "
-    fi
-}
-
 # 主程序入口
 main() {
     show_logo
@@ -624,8 +575,7 @@ main() {
     fi
     
     install_base_packages
-    init_mysql_service  # 添加这一行
-    
+    # 移除 init_mysql_service 调用
     while true; do
         show_menu
     done

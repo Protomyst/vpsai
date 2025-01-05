@@ -11,12 +11,11 @@ services:
       - ~/ai/data/newapi:/data
       - ./logs:/app/logs
     environment:
-      - SQL_DSN=newapi:newapi123@tcp(vpsai-mysql:3306)/newapi
+      # 移除 SQL_DSN 配置，使用默认的 SQLite
       - REDIS_CONN_STRING=redis://redis
       - TZ=Asia/Shanghai
     depends_on:
       - redis
-      - mysql
     networks:
       - vpsai-net
 
@@ -26,16 +25,6 @@ services:
     restart: always
     networks:
       - vpsai-net
-
-  mysql:
-    image: mysql:8.2
-    container_name: new-api-mysql
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: 123456
-      MYSQL_DATABASE: new-api
-    volumes:
-      - ~/ai/data/newapi-mysql:/var/lib/mysql
 
 networks:
   vpsai-net:

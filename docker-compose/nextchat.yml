@@ -9,31 +9,11 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - CODE=${CODE}
       - BASE_URL=${BASE_URL}
-      - DB_TYPE=mysql
-      - DB_HOST=vpsai-mysql
-      - DB_PORT=3306
-      - DB_USER=nextchat
-      - DB_PASS=nextchat123
-      - DB_NAME=nextchat
     volumes:
       - ~/ai/data/nextchat:/data
     restart: always
-    depends_on:
-      - mysql
     networks:
       - vpsai-net
-
-  mysql:
-    image: mysql:8.2
-    container_name: nextchat-mysql
-    restart: always
-    volumes:
-      - ~/ai/data/nextchat/mysql:/var/lib/mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: nextchat
-      MYSQL_DATABASE: nextchat
-      MYSQL_USER: nextchat
-      MYSQL_PASSWORD: nextchat
 
 networks:
   vpsai-net:
