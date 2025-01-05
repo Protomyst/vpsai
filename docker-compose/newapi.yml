@@ -11,17 +11,21 @@ services:
       - ~/ai/data/newapi:/data
       - ./logs:/app/logs
     environment:
-      - SQL_DSN=root:123456@tcp(mysql:3306)/new-api
+      - SQL_DSN=newapi:newapi123@tcp(vpsai-mysql:3306)/newapi
       - REDIS_CONN_STRING=redis://redis
       - TZ=Asia/Shanghai
     depends_on:
       - redis
       - mysql
+    networks:
+      - vpsai-net
 
   redis:
     image: redis:latest
     container_name: new-api-redis
     restart: always
+    networks:
+      - vpsai-net
 
   mysql:
     image: mysql:8.2
@@ -32,3 +36,7 @@ services:
       MYSQL_DATABASE: new-api
     volumes:
       - ~/ai/data/newapi-mysql:/var/lib/mysql
+
+networks:
+  vpsai-net:
+    external: true

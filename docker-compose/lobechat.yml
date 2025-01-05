@@ -13,13 +13,15 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ACCESS_CODE: ${ACCESS_CODE}
       DB_TYPE: mysql
-      DB_HOST: mysql
+      DB_HOST: vpsai-mysql
       DB_PORT: 3306
       DB_USER: lobechat
-      DB_PASS: lobechat
+      DB_PASS: lobechat123
       DB_NAME: lobechat
     depends_on:
       - mysql
+    networks:
+      - vpsai-net
 
   mysql:
     image: mysql:8.2
@@ -32,3 +34,7 @@ services:
       MYSQL_DATABASE: lobechat
       MYSQL_USER: lobechat
       MYSQL_PASSWORD: lobechat
+
+networks:
+  vpsai-net:
+    external: true

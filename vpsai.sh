@@ -488,6 +488,47 @@ check_services_status() {
     docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 }
 
+# 初始化MySQL服务
+init_mysql_service() {
+    echo "正在初始化MySQL服务..."
+    
+    # 创建共享网络
+    if ! docker network ls | grep -q vpsai-net; then
+        docker network create vpsai-net
+    fi
+    
+    # 启动MySQL服务
+    if ! docker ps | grep -q vpsai-mysql; then
+        cd ~/ai/data
+        docker-compose -f /etc/vpsai/docker-compose/mysql.yml up -d
+        echo "等待MySQL启动..."
+        sleep 10
+        
+        # 创建数据库和用户
+        docker exec vpsai-mysql mysql -uroot -pvpsai_root_pwd -e "
+            CREATE DATABASE IF NOT EXISTS oneapi;
+            CREATE DATABASE IF NOT EXISTS newapi;
+            CREATE DATABASE IF NOT EXISTS nextchat;
+            CREATE DATABASE IF NOT EXISTS librechat;
+            CREATE DATABASE IF NOT EXISTS lobechat;
+            
+            CREATE USER IF NOT EXISTS 'oneapi'@'%' IDENTIFIED BY 'oneapi123';
+            CREATE USER IF NOT EXISTS 'newapi'@'%' IDENTIFIED BY 'newapi123';
+            CREATE USER IF NOT EXISTS 'nextchat'@'%' IDENTIFIED BY 'nextchat123';
+            CREATE USER IF NOT EXISTS 'librechat'@'%' IDENTIFIED BY 'librechat123';
+            CREATE USER IF NOT EXISTS 'lobechat'@'%' IDENTIFIED BY 'lobechat123';
+            
+            GRANT ALL PRIVILEGES ON oneapi.* TO 'oneapi'@'%';
+            GRANT ALL PRIVILEGES ON newapi.* TO 'newapi'@'%';
+            GRANT ALL PRIVILEGES ON nextchat.* TO 'nextchat'@'%';
+            GRANT ALL PRIVILEGES ON librechat.* TO 'librechat'@'%';
+            GRANT ALL PRIVILEGES ON lobechat.* TO 'lobechat'@'%';
+            
+            FLUSH PRIVILEGES;
+        "
+    fi
+}
+
 # 主程序入口
 main() {
     show_logo
@@ -514,6 +555,8 @@ main() {
     fi
     
     install_base_packages
+    init_mysql_service  # 添加这一行
+    
     while true; do
         show_menu
     done

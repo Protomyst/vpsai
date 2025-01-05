@@ -17,7 +17,9 @@ services:
       - NODE_ENV=production
       - MONGO_URI=mongodb://mongodb:27017/LibreChat
       - DB_TYPE=mysql
-      - DB_CONNECTION=mysql://librechat:librechat@mysql:3306/librechat
+      - DB_CONNECTION=mysql://librechat:librechat123@vpsai-mysql:3306/librechat
+    networks:
+      - vpsai-net
 
   mongodb:
     container_name: librechat-mongodb
@@ -25,6 +27,8 @@ services:
     restart: always
     volumes:
       - ~/ai/data/librechat/mongodb:/data/db
+    networks:
+      - vpsai-net
 
   mysql:
     image: mysql:8.2
@@ -37,3 +41,7 @@ services:
       MYSQL_DATABASE: librechat
       MYSQL_USER: librechat
       MYSQL_PASSWORD: librechat
+
+networks:
+  vpsai-net:
+    external: true

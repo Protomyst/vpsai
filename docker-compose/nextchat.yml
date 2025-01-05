@@ -10,16 +10,18 @@ services:
       - CODE=${CODE}
       - BASE_URL=${BASE_URL}
       - DB_TYPE=mysql
-      - DB_HOST=mysql
+      - DB_HOST=vpsai-mysql
       - DB_PORT=3306
       - DB_USER=nextchat
-      - DB_PASS=nextchat
+      - DB_PASS=nextchat123
       - DB_NAME=nextchat
     volumes:
       - ~/ai/data/nextchat:/data
     restart: always
     depends_on:
       - mysql
+    networks:
+      - vpsai-net
 
   mysql:
     image: mysql:8.2
@@ -32,3 +34,7 @@ services:
       MYSQL_DATABASE: nextchat
       MYSQL_USER: nextchat
       MYSQL_PASSWORD: nextchat
+
+networks:
+  vpsai-net:
+    external: true
