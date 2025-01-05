@@ -133,7 +133,7 @@ show_menu() {
     show_logo
     echo "请选择操作："
     echo "1. 安装API服务 (OneAPI / NewAPI / VoAPI)"
-    echo "2. 安装Chat服务 (Open-WebUI / NextChat / LibreChat / LobeChat)"
+    echo "2. 安装Chat服务 (Open-WebUI / NextChat / LibreChat (暂时失效) / LobeChat)"
     echo "3. 检查服务状态"
     echo "4. 配置自动更新或手动更新"
     echo "5. 配置自定义域名"
