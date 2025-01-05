@@ -278,6 +278,61 @@ remove_services() {
     fi
 }
 
+# 彻底还原系统
+restore_system() {
+    echo -e "${RED}警告：此操作将删除所有服务和配置！${NC}"
+    echo "此操作将："
+    echo "1. 停止并删除所有Docker容器和网络"
+    echo "2. 删除所有服务数据"
+    echo "3. 删除所有配置文件"
+    echo "4. 删除vpsai命令"
+    echo "5. 移除自动更新任务"
+    
+    read -p "输入 'RESTORE' 确认操作: " confirm
+    if [ "$confirm" != "RESTORE" ]; then
+        echo "操作已取消"
+        return
+    fi
+    
+    echo "开始还原系统..."
+    
+    # 1. 停止所有服务
+    echo "停止所有服务..."
+    cd ~/ai/data
+    for dir in */; do
+        if [ -f "$dir/docker-compose.yml" ]; then
+            (cd "$dir" && docker-compose down -v)
+        fi
+    done
+    
+    # 2. 删除Docker网络
+    echo "删除Docker网络..."
+    docker network rm vpsai-net 2>/dev/null
+    
+    # 3. 删除数据目录
+    echo "删除数据目录..."
+    rm -rf ~/ai
+    
+    # 4. 删除配置文件
+    echo "删除配置文件..."
+    rm -rf /etc/vpsai
+    rm -f /etc/nginx/conf.d/vpsai_*.conf
+    
+    # 5. 删除vpsai命令
+    echo "删除vpsai命令..."
+    rm -f /usr/local/bin/vpsai
+    
+    # 6. 移除自动更新
+    echo "移除自动更新任务..."
+    crontab -l | grep -v "/etc/vpsai/cron/update.sh" | crontab -
+    
+    echo -e "${GREEN}系统已还原！${NC}"
+    echo "如果您想完全移除Docker和Nginx，请手动执行："
+    echo "apt-get remove docker.io docker-compose nginx"
+    
+    exit 0
+}
+
 # 显示帮助信息
 show_help() {
     cat << EOF
@@ -325,9 +380,10 @@ show_menu() {
     echo "6. 修改 Nginx 配置"
     echo "7. 删除服务"
     echo "8. 帮助"
-    echo "9. 退出脚本"
+    echo "9. 还原系统"
+    echo "0. 退出脚本"
     
-    read -p "请输入选项 [1-9]: " choice
+    read -p "请输入选项 [0-9]: " choice
     case $choice in
         1) install_api_services ;;
         2) install_chat_services ;;
@@ -337,7 +393,8 @@ show_menu() {
         6) modify_nginx_config ;;
         7) remove_services ;;
         8) show_help ;;
-        9) exit 0 ;;
+        9) restore_system ;;
+        0) exit 0 ;;
         *) echo -e "${RED}无效选项${NC}" ;;
     esac
 }
