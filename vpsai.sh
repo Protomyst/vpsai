@@ -372,39 +372,32 @@ install_api_services() {
 
     # 创建数据目录
     local service_name=""
+    local default_port=""
+    
     case $api_choice in
-        1) service_name="oneapi" ;;
-        2) service_name="newapi" ;;
-        3) service_name="voapi" ;;
+        1) 
+            service_name="oneapi"
+            default_port=3000
+            ;;
+        2) 
+            service_name="newapi"
+            default_port=4000
+            ;;
+        3) 
+            service_name="voapi"
+            default_port=5000
+            ;;
     esac
     
     mkdir -p ~/ai/data/$service_name
-    
-    # 配置端口和安装
-    local default_port
-    case $api_choice in
-        1) 
-            default_port=3000
-            cp /etc/vpsai/docker-compose/oneapi.yml ~/ai/data/oneapi/
-            cd ~/ai/data/oneapi
-            ;;
-        2) 
-            default_port=4000
-            cp /etc/vpsai/docker-compose/newapi.yml ~/ai/data/newapi/
-            cd ~/ai/data/newapi
-            ;;
-        3) 
-            default_port=5000
-            cp /etc/vpsai/docker-compose/voapi.yml ~/ai/data/voapi/
-            cd ~/ai/data/voapi
-            ;;
-    esac
+    cd ~/ai/data/$service_name
+    cp /etc/vpsai/docker-compose/${service_name}.yml ./
     
     port=$(check_port $default_port)
-    sed -i "s/$default_port:/$port:/" docker-compose.yml
+    sed -i "s/$default_port:/$port:/" *.yml
     
-    # 启动服务
-    docker-compose up -d
+    # 启动服务，使用找到的yml文件
+    docker-compose -f *.yml up -d
     
     # 配置域名并获取返回值
     domain_info=$(configure_domain $service_name $port)
@@ -462,13 +455,14 @@ install_chat_services() {
     esac
     
     mkdir -p ~/ai/data/$service_name
-    cp /etc/vpsai/docker-compose/${service_name}.yml ~/ai/data/$service_name/docker-compose.yml
+    cd ~/ai/data/$service_name
+    cp /etc/vpsai/docker-compose/${service_name}.yml ./
     
     port=$(check_port $default_port)
-    cd ~/ai/data/$service_name
-    sed -i "s/$default_port:/$port:/" docker-compose.yml
+    sed -i "s/$default_port:/$port:/" *.yml
     
-    docker-compose up -d
+    # 启动服务，使用找到的yml文件
+    docker-compose -f *.yml up -d
     
     # 配置域名并获取返回值
     domain_info=$(configure_domain $service_name $port)
