@@ -408,6 +408,14 @@ get_server_ip() {
     fi
 }
 
+# 添加创建 Docker 网络的函数
+create_docker_network() {
+    if ! docker network ls | grep -q vpsai-net; then
+        echo "创建 Docker 网络..."
+        docker network create vpsai-net
+    fi
+}
+
 # 安装API服务
 install_api_services() {
     echo "1. OneAPI"
@@ -439,6 +447,9 @@ install_api_services() {
             default_port=5000
             ;;
     esac
+    
+    # 确保网络存在
+    create_docker_network
     
     mkdir -p ~/ai/data/$service_name
     cd ~/ai/data/$service_name
@@ -511,6 +522,9 @@ install_chat_services() {
             ;;
     esac
     
+    # 确保网络存在
+    create_docker_network
+    
     mkdir -p ~/ai/data/$service_name
     cd ~/ai/data/$service_name
     cp /etc/vpsai/docker-compose/${service_name}.yml docker-compose.yml
@@ -575,6 +589,7 @@ main() {
     fi
     
     install_base_packages
+    create_docker_network  # 添加这一行
     # 移除 init_mysql_service 调用
     while true; do
         show_menu
