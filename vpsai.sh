@@ -257,9 +257,11 @@ remove_services() {
             if [ "$confirm" = "y" ]; then
                 cd ~/ai/data
                 for dir in */; do
-                    cd "$dir" && docker-compose down -v
-                    cd ..
-                    rm -rf "$dir"
+                    if [ -f "$dir"/*.yml ]; then
+                        cd "$dir" && docker-compose -f *.yml down -v
+                        cd ..
+                        rm -rf "$dir"
+                    fi
                 done
                 echo -e "${GREEN}所有服务已删除${NC}"
                 return
@@ -269,7 +271,7 @@ remove_services() {
     
     if [ -n "$service" ]; then
         cd ~/ai/data/$service
-        docker-compose down -v
+        docker-compose -f *.yml down -v
         cd ..
         rm -rf $service
         echo -e "${GREEN}服务 $service 已删除${NC}"
