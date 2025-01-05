@@ -4,6 +4,12 @@ VERSION="v0.0.1"
 AUTHOR="Protomyst"
 ROOT_DIR="/root/ai"
 DATA_DIR="${ROOT_DIR}/data"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# 引入其他脚本
+source "${SCRIPT_DIR}/services.sh"
+source "${SCRIPT_DIR}/update.sh"
+source "${SCRIPT_DIR}/nginx.sh"
 
 # 显示logo
 show_logo() {
@@ -156,6 +162,16 @@ show_menu() {
     esac
 }
 
+# 设置全局变量导出
+export VERSION AUTHOR ROOT_DIR DATA_DIR is_arm
+
+# 导出公共函数
+export -f check_port
+export -f open_firewall_port
+export -f create_data_dir
+export -f handle_error
+export -f show_progress
+
 # 主程序入口
 main() {
     trap 'handle_error "脚本执行中断"' INT TERM
@@ -172,6 +188,8 @@ main() {
     
     install_dependencies
     start_services
+
+    chmod +x /root/vpsai/*.sh
     
     while true; do
         show_menu
