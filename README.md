@@ -25,28 +25,23 @@
 ### API网关
 | 服务名 | 默认端口 | 说明 |
 |--------|----------|------|
-| OneAPI | 3000 | OpenAI API代理聚合 |
-| NewAPI | 4000 | 新一代API管理平台 |
-| VoAPI  | 5000 | 语音服务API(仅x86) |
+| OneAPI | 3000 | 新一代API管理平台 |
+| NewAPI | 4000 | OneAPI二开 |
+| VoAPI  | 5000 | NewAPI二开(仅x86，闭源) |
 
 ### Chat前端
 | 服务名 | 默认端口 | 说明 |
 |--------|----------|------|
-| Open-WebUI | 6001 | 开源Web界面 |
+| Open-WebUI | 6001 | 功能强大的Chat客户端 |
 | NextChat | 7000 | 轻量级聊天前端 |
-| LibreChat | 8000 | 功能丰富的聊天系统 |
-| LobeChat | 9000 | AI助手交互界面 |
+| LibreChat | 8000 | 界面美观的聊天系统 |
+| LobeChat | 9000 | 界面美观的聊天系统 |
 
 ## 🚀 快速开始
 
 ### 一键安装
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Protomyst/vpsai/main/install.sh | sudo bash
-```
-
-或者手动安装：
-```bash
-git clone https://github.com/Protomyst/vpsai.git && cd vpsai && sudo bash vpsai.sh
 ```
 
 ### 使用教程
