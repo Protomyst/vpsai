@@ -189,7 +189,7 @@ install_api_service() {
 # Chat服务安装
 install_chat_service() {
     echo "请选择要安装的Chat服务："
-    echo "1. Open-WebUI (默认端口: 6000)"
+    echo "1. Open-WebUI (默认端口: 6001)"
     echo "2. NextChat (默认端口: 7000)"
     echo "3. LibreChat (默认端口: 8000)"
     echo "4. LobeChat (默认端口: 9000)"
@@ -351,7 +351,7 @@ EOF
 
 # Open WebUI安装
 install_open_webui() {
-    local default_port=6000
+    local default_port=6001
     read -p "请输入端口号 (默认: $default_port): " port
     port=${port:-$default_port}
     
@@ -580,7 +580,7 @@ configure_custom_cert() {
     echo "1. OneAPI (端口: 3000)"
     echo "2. NewAPI (端口: 4000)"
     echo "3. VoAPI (端口: 5000)"
-    echo "4. Open-WebUI (端口: 6000)"
+    echo "4. Open-WebUI (端口: 6001)"
     echo "5. NextChat (端口: 7000)"
     echo "6. LibreChat (端口: 8000)"
     echo "7. LobeChat (端口: 9000)"
@@ -592,7 +592,7 @@ configure_custom_cert() {
         1) port=3000 ;;
         2) port=4000 ;;
         3) port=5000 ;;
-        4) port=6000 ;;
+        4) port=6001 ;;
         5) port=7000 ;;
         6) port=8000 ;;
         7) port=9000 ;;
@@ -664,7 +664,7 @@ EOF
     echo "1. OneAPI (端口: 3000)"
     echo "2. NewAPI (端口: 4000)"
     echo "3. VoAPI (端口: 5000)"
-    echo "4. Open-WebUI (端口: 6000)"
+    echo "4. Open-WebUI (端口: 6001)"
     echo "5. NextChat (端口: 7000)"
     echo "6. LibreChat (端口: 8000)"
     echo "7. LobeChat (端口: 9000)"
@@ -676,7 +676,7 @@ EOF
         1) port=3000 ;;
         2) port=4000 ;;
         3) port=5000 ;;
-        4) port=6000 ;;
+        4) port=6001 ;;
         5) port=7000 ;;
         6) port=8000 ;;
         7) port=9000 ;;

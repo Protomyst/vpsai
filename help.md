@@ -16,7 +16,7 @@
 
 ### 2. Chat服务
 
-- Open-WebUI (端口: 6000)
+- Open-WebUI (端口: 6001)
 - NextChat (端口: 7000)
 - LibreChat (端口: 8000)
 - LobeChat (端口: 9000)
